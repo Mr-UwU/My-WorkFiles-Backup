@@ -1,0 +1,8 @@
+Hi @
+
+No issues has been found upon rechecking on this issue ( BIR Sales Summary Report - generating PDF )
+I can generate pdf on branches:
+- base/dev-staging
+- base/dev-staging-mov
+and
+- apptest-replica
