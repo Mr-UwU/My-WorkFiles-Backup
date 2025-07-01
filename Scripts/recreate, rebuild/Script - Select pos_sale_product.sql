@@ -1,6 +1,6 @@
 -- SET ----------------------------------------------------------------------------------------------------
 SET 	
-    @pubID := 'SHOST-10050582-0002'
+	@pubID := 'SHOST-10050582-0002'
 	,@trx_no := '308880'
 	,@termID := '0002';	
 -- ----------------------------------------------------------------------------------------------------	
@@ -16,10 +16,14 @@ SET
 SELECT	'' AS 'pos_sale_product'
     ,psd.frecno
 	,psd.fproductid
-	,psd.funitprice
+	
+	,psd.fextprice
+	-- ,psd.funitprice
+
 	,psd.fqty
 	,psd.ftax_type
 	
+	,psd.fdiscount
 	,psd.fdiscp
 	
 	,psd.fsc_discp
@@ -43,7 +47,7 @@ SELECT	'' AS 'pos_sale_product'
 	,psd.ftotal_line
 	,psd.fstatus_flag
 	
-	-- ,psd.ftotal_discount
+	,psd.ftotal_discount
 	
 FROM pos_sale_product psd
 	JOIN pos_sale ps 
@@ -87,7 +91,7 @@ SELECT '' AS 'pos_sale'
 	,freturn_flag
 	
 	,fcustomer_count
-	,(fscratio * fcustomer_count) AS Seniors
+	,ROUND(ABS(fscratio * fcustomer_count), 0) AS Seniors
 	
 	,''
 	,''
