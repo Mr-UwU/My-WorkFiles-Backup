@@ -18,16 +18,8 @@ SELECT main.*
             ,a.ftax_type AS ftax_type
             ,' ' AS '..'
             ,pos.fcustomer_count AS customers
-            ,senior_data.senior_count AS seniors
-
             ,ABS((fscratio * fcustomer_count)) AS Seniors_only
             ,(senior_data.senior_count) - ABS((fscratio * fcustomer_count)) as PWD
-            ,pos.fscdiscount AS fscdiscount
-
-            -- ,pos.ftotal_discount AS ftotal_discount
-            -- ,pos.fdiscount1 AS fdiscount1
-            -- ,pos.fline_scdiscount AS fline_scdiscount
-            -- ,a.fdiscount4 AS fdiscount4
             
             ,' ' AS '...'
             ,' ' AS '....'
@@ -36,30 +28,19 @@ SELECT main.*
 
             ,' ' AS '.....'
 
-            -- Tax Sale --------------------------------------------------
+            -- Tax Sale ----------------------------------------------------------------------------------------------------
             -- --------------------------------------------------
             ,pos.finc_sale AS finc_sale
             ,pos.fexc_sale AS fexc_sale
 
             ,(pos.finc_sale + pos.fexc_sale) AS "inc + exc"
 
-            -- inc + exc sale should be equal to tax sale
-            ,CASE
-                WHEN (pos.finc_sale + pos.fexc_sale) = pos.ftax_sale
-                THEN "<- OK ->"
-                ELSE "NOT EQUAL"
-            END AS "Checker Tax Sale 1"
-
-
             ,' ' AS "...................."
 
-            ,ROUND(pos.ftax_sale, 4) AS Tax_Sale
-            -- --------------------------------------------------
 
-           
-            
-            -- checker tax sale --------------------------------------------------
-            -- --------------------------------------------------
+
+            ,ROUND(pos.ftax_sale, 4) AS Tax_Sale
+  
             ,CASE
                 WHEN ( 
                     pos.ftax_sale 
@@ -82,7 +63,7 @@ SELECT main.*
                                                 ROUND(
                                                     CASE
                                                         WHEN psd.ftax_type = 0
-                                                            AND psd.fstatus_flag IN (0, 1)
+                                                            AND psd.fstatus_flag IN ('0', '1')
                                                             AND psd.ftotal_line <> 0
                                                         THEN
                                                             CASE
@@ -115,7 +96,7 @@ SELECT main.*
                                                 ROUND(
                                                     CASE
                                                         WHEN psd.ftax_type = 1
-                                                            AND psd.fstatus_flag IN (0, 1)
+                                                            AND psd.fstatus_flag IN ('0', '1')
                                                             AND psd.ftotal_line <> 0
                                                         THEN
                                                             CASE
@@ -162,7 +143,9 @@ SELECT main.*
                                             SELECT SUM(
                                                 ROUND(
                                                     CASE
-                                                        WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
+                                                        WHEN psd.fstatus_flag NOT IN ('0', '1') 
+                                                            OR ftotal_line = 0
+                                                                THEN 0
 
                                                         -- If fdiscount or fdiscp exists
                                                         WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
@@ -215,7 +198,7 @@ SELECT main.*
                                                 AND psd.ftermid = a.ftermid
                                                 AND psd.fcompanyid = a.fcompanyid
                                         )
-                                        * (pos.fdiscp / 100)
+                                        * ((pos.fdiscp / 100) + (IFNULL(pspd.fdiscp, 0) / 100))
                                     )
                                 , 4)
                             )
@@ -226,10 +209,7 @@ SELECT main.*
                 THEN "<- OK ->"
                 ELSE "NOT EQUAL"
             END AS "Checker Tax Sale"
-            -- --------------------------------------------------
 
-            -- Expected Tax Sale --------------------------------------------------
-            -- --------------------------------------------------
             ,CASE
                 WHEN EXISTS (
                     SELECT 1 
@@ -247,7 +227,7 @@ SELECT main.*
                                     ROUND(
                                         CASE
                                             WHEN psd.ftax_type = 0
-                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.fstatus_flag IN ('0', '1')
                                                 AND psd.ftotal_line <> 0
                                             THEN
                                                 CASE
@@ -280,7 +260,7 @@ SELECT main.*
                                     ROUND(
                                         CASE
                                             WHEN psd.ftax_type = 1
-                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.fstatus_flag IN ('0', '1')
                                                 AND psd.ftotal_line <> 0
                                             THEN
                                                 CASE
@@ -327,7 +307,9 @@ SELECT main.*
                                 SELECT SUM(
                                     ROUND(
                                         CASE
-                                            WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
+                                            WHEN psd.fstatus_flag NOT IN ('0', '1') 
+                                                OR ftotal_line = 0
+                                                    THEN 0
 
                                             -- If fdiscount or fdiscp exists
                                             WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
@@ -380,19 +362,21 @@ SELECT main.*
                                     AND psd.ftermid = a.ftermid
                                     AND psd.fcompanyid = a.fcompanyid
                             )
-                            * (pos.fdiscp / 100)
+                            * ((pos.fdiscp / 100) + (IFNULL(pspd.fdiscp, 0) / 100))
                         )
                     , 4)
                 )
                 ELSE NULL
             END AS Expected_TaxSale
-            -- --------------------------------------------------
+            -- ----------------------------------------------------------------------------------------------------
     
 
 
             ,'' AS "....................1"
 
-            -- Sales Tax --------------------------------------------------
+
+
+            -- Sales Tax ----------------------------------------------------------------------------------------------------
             -- --------------------------------------------------  
 
             ,ROUND(pos.ftax, 4) AS Sales_Tax
@@ -421,7 +405,7 @@ SELECT main.*
                                                     ROUND(
                                                         CASE
                                                             WHEN psd.ftax_type = 0
-                                                                AND psd.fstatus_flag IN (0, 1)
+                                                                AND psd.fstatus_flag IN ('0', '1')
                                                                 AND psd.ftotal_line <> 0
                                                             THEN
                                                                 CASE
@@ -454,7 +438,7 @@ SELECT main.*
                                                     ROUND(
                                                         CASE
                                                             WHEN psd.ftax_type = 1
-                                                                AND psd.fstatus_flag IN (0, 1)
+                                                                AND psd.fstatus_flag IN ('0', '1')
                                                                 AND psd.ftotal_line <> 0
                                                             THEN
                                                                 CASE
@@ -501,7 +485,9 @@ SELECT main.*
                                                 SELECT SUM(
                                                     ROUND(
                                                         CASE
-                                                            WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
+                                                            WHEN psd.fstatus_flag NOT IN ('0', '1') 
+                                                                OR ftotal_line = 0
+                                                                    THEN 0
 
                                                             -- If fdiscount or fdiscp exists
                                                             WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
@@ -554,7 +540,7 @@ SELECT main.*
                                                     AND psd.ftermid = a.ftermid
                                                     AND psd.fcompanyid = a.fcompanyid
                                             )
-                                            * (pos.fdiscp / 100)
+                                            * ((pos.fdiscp / 100) + (IFNULL(pspd.fdiscp, 0) / 100))
                                         )
                                     ) / 1.12 * 0.12
                                 , 4)
@@ -566,9 +552,6 @@ SELECT main.*
                 THEN "<- OK ->"
                 ELSE "NOT EQUAL"			 
             END AS "Checker Sales Tax"
-
-            -- Expected Sales Tax ---------------------------------------------
-            -- --------------------------------------------------
 
             ,CASE
                 WHEN EXISTS (
@@ -588,7 +571,7 @@ SELECT main.*
                                         ROUND(
                                             CASE
                                                 WHEN psd.ftax_type = 0
-                                                    AND psd.fstatus_flag IN (0, 1)
+                                                    AND psd.fstatus_flag IN ('0', '1')
                                                     AND psd.ftotal_line <> 0
                                                 THEN
                                                     CASE
@@ -621,7 +604,7 @@ SELECT main.*
                                         ROUND(
                                             CASE
                                                 WHEN psd.ftax_type = 1
-                                                    AND psd.fstatus_flag IN (0, 1)
+                                                    AND psd.fstatus_flag IN ('0', '1')
                                                     AND psd.ftotal_line <> 0
                                                 THEN
                                                     CASE
@@ -668,7 +651,9 @@ SELECT main.*
                                     SELECT SUM(
                                         ROUND(
                                             CASE
-                                                WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
+                                                WHEN psd.fstatus_flag NOT IN ('0', '1') 
+                                                    OR ftotal_line = 0
+                                                        THEN 0
 
                                                 -- If fdiscount or fdiscp exists
                                                 WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
@@ -721,27 +706,24 @@ SELECT main.*
                                         AND psd.ftermid = a.ftermid
                                         AND psd.fcompanyid = a.fcompanyid
                                 )
-                                * (pos.fdiscp / 100)
+                                * ((pos.fdiscp / 100) + (IFNULL(pspd.fdiscp, 0) / 100))
                             )
                         ) / 1.12 * 0.12
                     , 4)
                 )
                 ELSE NULL
             END AS Expected_SalesTax
-
-            -- --------------------------------------------------
-
+            -- ----------------------------------------------------------------------------------------------------
 
 
-            -- VAT Exempt --------------------------------------------------
-            -- --------------------------------------------------
+
             ,'' AS "....................2"
+
+
+            -- Vat Exempt ----------------------------------------------------------------------------------------------------
+            -- --------------------------------------------------
             ,ROUND(pos.fvat_exempt, 4) AS VAT_EXEMPT
 
-
-
-            -- Vat Exempt Checker ---------------------------------------------------
-            -- --------------------------------------------------
             ,CASE
                 WHEN(
                     (
@@ -780,7 +762,7 @@ SELECT main.*
                                                 ROUND(
                                                     CASE
                                                         WHEN psd.ftax_type = 4
-                                                            AND psd.fstatus_flag IN (0, 1)
+                                                            AND psd.fstatus_flag IN ('0', '1')
                                                             AND psd.ftotal_line <> 0
                                                         THEN
                                                             CASE
@@ -814,7 +796,7 @@ SELECT main.*
                                                         ROUND(
                                                             CASE
                                                                 WHEN psd.ftax_type = 0
-                                                                    AND psd.fstatus_flag IN (0, 1)
+                                                                    AND psd.fstatus_flag IN ('0', '1')
                                                                     AND psd.ftotal_line <> 0
                                                                 THEN
                                                                     CASE
@@ -847,7 +829,7 @@ SELECT main.*
                                                         ROUND(
                                                             CASE
                                                                 WHEN psd.ftax_type = 1
-                                                                    AND psd.fstatus_flag IN (0, 1)
+                                                                    AND psd.fstatus_flag IN ('0', '1')
                                                                     AND psd.ftotal_line <> 0
                                                                 THEN
                                                                     CASE
@@ -894,7 +876,7 @@ SELECT main.*
                                                     ROUND(
                                                         CASE
                                                             WHEN psd.ftax_type = 4
-                                                                AND psd.fstatus_flag IN (0, 1)
+                                                                AND psd.fstatus_flag IN ('0', '1')
                                                                 AND psd.ftotal_line <> 0
                                                             THEN
                                                                 CASE
@@ -932,12 +914,7 @@ SELECT main.*
                 THEN "<- OK ->"
                 ELSE "NOT EQUAL"
             END AS "Checker EVAT"
-            -- --------------------------------------------------
-
-
-
-            -- Expected VAT Exempt --------------------------------------------------
-            -- --------------------------------------------------
+ 
             ,CASE 
                 WHEN EXISTS (
                     SELECT 1 
@@ -969,7 +946,7 @@ SELECT main.*
                                     ROUND(
                                         CASE
                                             WHEN psd.ftax_type = 4
-                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.fstatus_flag IN ('0', '1')
                                                 AND psd.ftotal_line <> 0
                                             THEN
                                                 CASE
@@ -1003,7 +980,7 @@ SELECT main.*
                                             ROUND(
                                                 CASE
                                                     WHEN psd.ftax_type = 0
-                                                        AND psd.fstatus_flag IN (0, 1)
+                                                        AND psd.fstatus_flag IN ('0', '1')
                                                         AND psd.ftotal_line <> 0
                                                     THEN
                                                         CASE
@@ -1036,7 +1013,7 @@ SELECT main.*
                                             ROUND(
                                                 CASE
                                                     WHEN psd.ftax_type = 1
-                                                        AND psd.fstatus_flag IN (0, 1)
+                                                        AND psd.fstatus_flag IN ('0', '1')
                                                         AND psd.ftotal_line <> 0
                                                     THEN
                                                         CASE
@@ -1083,7 +1060,7 @@ SELECT main.*
                                         ROUND(
                                             CASE
                                                 WHEN psd.ftax_type = 4
-                                                    AND psd.fstatus_flag IN (0, 1)
+                                                    AND psd.fstatus_flag IN ('0', '1')
                                                     AND psd.ftotal_line <> 0
                                                 THEN
                                                     CASE
@@ -1117,34 +1094,17 @@ SELECT main.*
                 ELSE NULL
             END AS Expected_VatExempt
 
-            -- --------------------------------------------------
+            -- ----------------------------------------------------------------------------------------------------
 
         FROM pos_sale_product a 
-        LEFT JOIN pos_sale pos
-            ON pos.fpubid = a.fpubid 
-            AND pos.frecno = a.frecno
-        LEFT JOIN pos_sale_senior pss
-            on pos.fpubid = pss.fpubid
-            AND pos.ftermid = pss.ftermid
-            AND pos.frecno = pss.frecno
-        LEFT JOIN (
-            SELECT ps.fcompanyid AS fcompanyid, ps.ftermid AS ftermid, ps.frecno AS frecno, ps.fpubid AS fpubid,
-                CASE 
-                    WHEN ps.fcustomer_count < 0
-                    THEN -ROUND(SUM((ps.fscratio * ABS(ps.fcustomer_count)) + COALESCE(psi.fint_data,0)),0)
-                    ELSE ROUND(SUM((ps.fscratio * ps.fcustomer_count) + COALESCE(psi.fint_data,0)),0) 
-                END AS senior_count
-            FROM pos_sale ps
-            LEFT JOIN pos_sale_info psi ON (ps.fcompanyid=psi.fcompanyid AND ps.fpubid=psi.fpubid AND ps.frecno=psi.frecno AND psi.fcode1='SALE' AND psi.fcode2='#PWD')
-            WHERE ps.fcompanyid = @companyID 
-                AND ps.fpubid = @pubID
-                AND ps.ftermid = @termID
-            GROUP BY fcompanyid, ftermid, frecno
-        ) senior_data 
-            ON a.fcompanyid = senior_data.fcompanyid 
-            AND a.fpubid = senior_data.fpubid 
-            AND a.ftermid = senior_data.ftermid
-            AND a.frecno = senior_data.frecno
+            LEFT JOIN pos_sale pos
+                ON pos.fpubid = a.fpubid 
+                AND pos.frecno = a.frecno
+            LEFT JOIN pos_sale_product_discount pspd
+                ON pspd.fpubid = pos.fpubid 
+                AND pspd.ftermid = pos.ftermid 
+                AND pspd.fcompanyid = pos.fcompanyid 
+                AND pspd.frecno = pos.frecno
         WHERE a.fcompanyid = @companyID
             AND a.fpubid = @pubID
             AND a.ftermid = @termID
