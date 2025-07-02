@@ -22,7 +22,7 @@ JOIN(
                         ROUND(
                             CASE
                                 WHEN psd.ftax_type = 0
-                                    AND psd.fstatus_flag IN (0, 1)
+                                    AND psd.fstatus_flag IN ('0', '1')
                                     AND psd.ftotal_line <> 0
                                 THEN
                                     CASE
@@ -39,8 +39,8 @@ JOIN(
                                             * (1 - psd.fdiscount_percent6 / 100))
                                     END
                                 ELSE 0
-                            END,
-                        2)
+                            END
+                        , 4)
                     )
                     FROM pos_sale_product psd
                     WHERE psd.frecno = a.frecno
@@ -55,7 +55,7 @@ JOIN(
                         ROUND(
                             CASE
                                 WHEN psd.ftax_type = 1
-                                    AND psd.fstatus_flag IN (0, 1)
+                                    AND psd.fstatus_flag IN ('0', '1')
                                     AND psd.ftotal_line <> 0
                                 THEN
                                     CASE
@@ -72,8 +72,8 @@ JOIN(
                                             * (1 - psd.fdiscount_percent6 / 100))
                                     END
                                 ELSE 0
-                            END,
-                        2)
+                            END
+                        , 4)
                     )
                     FROM pos_sale_product psd
                     WHERE psd.frecno = a.frecno
@@ -102,7 +102,9 @@ JOIN(
                     SELECT SUM(
                         ROUND(
                             CASE
-                                WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
+                                WHEN psd.fstatus_flag NOT IN ('0', '1') 
+                                    OR ftotal_line = 0
+                                        THEN 0
 
                                 -- If fdiscount or fdiscp exists
                                 WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
@@ -146,8 +148,8 @@ JOIN(
                                     * (1 - psd.fdiscount_percent4 / 100)
                                     * (1 - psd.fdiscount_percent5 / 100)
                                     * (1 - psd.fdiscount_percent6 / 100)
-                            END,
-                        2)
+                            END
+                        , 4)
                     )
                     FROM pos_sale_product psd
                     WHERE psd.frecno = a.frecno
@@ -155,7 +157,7 @@ JOIN(
                         AND psd.ftermid = a.ftermid
                         AND psd.fcompanyid = a.fcompanyid
                 )
-                * (pos.fdiscp / 100)
+                * ((pos.fdiscp / 100) + (IFNULL(pspd.fdiscp, 0) / 100))
             )
         , 4) AS Expected_TaxSale
 
@@ -167,7 +169,7 @@ JOIN(
                             ROUND(
                                 CASE
                                     WHEN psd.ftax_type = 0
-                                        AND psd.fstatus_flag IN (0, 1)
+                                        AND psd.fstatus_flag IN ('0', '1')
                                         AND psd.ftotal_line <> 0
                                     THEN
                                         CASE
@@ -184,8 +186,8 @@ JOIN(
                                                 * (1 - psd.fdiscount_percent6 / 100))
                                         END
                                     ELSE 0
-                                END,
-                            2)
+                                END
+                            , 4)
                         )
                         FROM pos_sale_product psd
                         WHERE psd.frecno = a.frecno
@@ -200,7 +202,7 @@ JOIN(
                             ROUND(
                                 CASE
                                     WHEN psd.ftax_type = 1
-                                        AND psd.fstatus_flag IN (0, 1)
+                                        AND psd.fstatus_flag IN ('0', '1')
                                         AND psd.ftotal_line <> 0
                                     THEN
                                         CASE
@@ -217,8 +219,8 @@ JOIN(
                                                 * (1 - psd.fdiscount_percent6 / 100))
                                         END
                                     ELSE 0
-                                END,
-                            2)
+                                END
+                            , 4)
                         )
                         FROM pos_sale_product psd
                         WHERE psd.frecno = a.frecno
@@ -247,7 +249,9 @@ JOIN(
                         SELECT SUM(
                             ROUND(
                                 CASE
-                                    WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
+                                    WHEN psd.fstatus_flag NOT IN ('0', '1') 
+                                        OR ftotal_line = 0
+                                            THEN 0
 
                                     -- If fdiscount or fdiscp exists
                                     WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
@@ -291,8 +295,8 @@ JOIN(
                                         * (1 - psd.fdiscount_percent4 / 100)
                                         * (1 - psd.fdiscount_percent5 / 100)
                                         * (1 - psd.fdiscount_percent6 / 100)
-                                END,
-                            2)
+                                END
+                            , 4)
                         )
                         FROM pos_sale_product psd
                         WHERE psd.frecno = a.frecno
@@ -300,7 +304,7 @@ JOIN(
                             AND psd.ftermid = a.ftermid
                             AND psd.fcompanyid = a.fcompanyid
                     )
-                    * (pos.fdiscp / 100)
+                    * ((pos.fdiscp / 100) + (IFNULL(pspd.fdiscp, 0) / 100))
                 )
             ) / 1.12 * 0.12
         , 4) AS Expected_SalesTax
@@ -326,7 +330,7 @@ JOIN(
                         ROUND(
                             CASE
                                 WHEN psd.ftax_type = 4
-                                    AND psd.fstatus_flag IN (0, 1)
+                                    AND psd.fstatus_flag IN ('0', '1')
                                     AND psd.ftotal_line <> 0
                                 THEN
                                     CASE
@@ -343,8 +347,8 @@ JOIN(
                                             * (1 - psd.fdiscount_percent6 / 100))
                                     END
                                 ELSE 0
-                            END,
-                        2)
+                            END
+                        , 4)
                     )
                     FROM pos_sale_product psd
                     WHERE psd.frecno = a.frecno
@@ -360,7 +364,7 @@ JOIN(
                                 ROUND(
                                     CASE
                                         WHEN psd.ftax_type = 0
-                                            AND psd.fstatus_flag IN (0, 1)
+                                            AND psd.fstatus_flag IN ('0', '1')
                                             AND psd.ftotal_line <> 0
                                         THEN
                                             CASE
@@ -377,8 +381,8 @@ JOIN(
                                                     * (1 - psd.fdiscount_percent6 / 100))
                                             END
                                         ELSE 0
-                                    END,
-                                2)
+                                    END
+                                , 4)
                             )
                             FROM pos_sale_product psd
                             WHERE psd.frecno = a.frecno
@@ -393,7 +397,7 @@ JOIN(
                                 ROUND(
                                     CASE
                                         WHEN psd.ftax_type = 1
-                                            AND psd.fstatus_flag IN (0, 1)
+                                            AND psd.fstatus_flag IN ('0', '1')
                                             AND psd.ftotal_line <> 0
                                         THEN
                                             CASE
@@ -410,8 +414,8 @@ JOIN(
                                                     * (1 - psd.fdiscount_percent6 / 100))
                                             END
                                         ELSE 0
-                                    END,
-                                2)
+                                    END
+                                , 4)
                             )
                             FROM pos_sale_product psd
                             WHERE psd.frecno = a.frecno
@@ -440,7 +444,7 @@ JOIN(
                             ROUND(
                                 CASE
                                     WHEN psd.ftax_type = 4
-                                        AND psd.fstatus_flag IN (0, 1)
+                                        AND psd.fstatus_flag IN ('0', '1')
                                         AND psd.ftotal_line <> 0
                                     THEN
                                         CASE
@@ -457,8 +461,8 @@ JOIN(
                                                 * (1 - psd.fdiscount_percent6 / 100))
                                         END
                                     ELSE 0
-                                END,
-                            2)
+                                END
+                            , 4)
                         )
                         FROM pos_sale_product psd
                         WHERE psd.frecno = a.frecno
@@ -472,11 +476,16 @@ JOIN(
         , 4) AS Expected_VatExempt
 
     FROM pos_sale_product a
-    JOIN pos_sale pos
-        ON pos.frecno = a.frecno
-        AND pos.fpubid = a.fpubid
-        AND pos.ftermid = a.ftermid
-        AND pos.fcompanyid = a.fcompanyid
+        LEFT JOIN pos_sale pos
+            ON pos.frecno = a.frecno
+            AND pos.fpubid = a.fpubid
+            AND pos.ftermid = a.ftermid
+            AND pos.fcompanyid = a.fcompanyid
+        LEFT JOIN pos_sale_product_discount pspd
+                ON pspd.fpubid = pos.fpubid 
+                AND pspd.ftermid = pos.ftermid 
+                AND pspd.fcompanyid = pos.fcompanyid 
+                AND pspd.frecno = pos.frecno
     WHERE pos.fcompanyid = @companyID
         AND pos.fpubid = @pubID
         AND pos.ftermid = @termID
@@ -485,12 +494,12 @@ JOIN(
         AND pos.fcustomer_count <> 0
         AND NOT (pos.fscdiscount <> 0 AND pos.fline_scdiscount <> 0)
     GROUP BY a.frecno
-) calc
-ON pos.frecno = calc.frecno
-    AND pos.fpubid = calc.fpubid
-    AND pos.ftermid = calc.ftermid
-    AND pos.fcompanyid = calc.fcompanyid
+) main
+ON pos.frecno = main.frecno
+    AND pos.fpubid = main.fpubid
+    AND pos.ftermid = main.ftermid
+    AND pos.fcompanyid = main.fcompanyid
 SET 
-    pos.ftax_sale = calc.Expected_TaxSale,
-    pos.ftax = calc.Expected_SalesTax,
-    pos.fvat_exempt = calc.Expected_VatExempt;
+    pos.ftax_sale = main.Expected_TaxSale,
+    pos.ftax = main.Expected_SalesTax,
+    pos.fvat_exempt = main.Expected_VatExempt;
