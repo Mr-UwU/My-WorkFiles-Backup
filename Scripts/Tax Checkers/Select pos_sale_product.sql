@@ -43,7 +43,7 @@ SELECT	'' AS 'pos_sale_product'
 	,psd.fdiscount_percent5
 	,psd.fdiscount5
 	
-	,psd.fdiscount_percent6
+	,psd.fdiscount_percent6	
 	,psd.fdiscount6
 	
 	,psd.ftotal_line
@@ -163,4 +163,37 @@ FROM (
     WHERE psi.fpubid = @pubID 
         AND ps.ftrx_no = @trx_no
 ) sub2;
+-- ----------------------------------------------------------------------------------------------------	
+
+
+
+-- mst_product ----------------------------------------------------------------------------------------------------	
+-- ----------------------------------------------------------------------------------------------------
+
+SELECT 	psp.frecno
+	,psp.fproductid
+	
+	,psp.fextprice
+
+	,psp.fqty
+	,psp.ftax_type
+	,psp.foriginal_tax_type
+	,mp.fsctaxid
+FROM pos_sale ps
+	JOIN pos_sale_product psp
+		ON psp.frecno = ps.frecno
+		AND psp.fpubid = ps.fpubid
+	JOIN mst_product mp 
+		ON mp.fproductid = psp.fproductid
+WHERE psp.fpubid = @pubID 
+	AND ps.ftrx_no = @trx_no;
+-- ----------------------------------------------------------------------------------------------------	
+
+
+
+-- mst_government_discount_tax ----------------------------------------------------------------------------------------------------	
+-- ----------------------------------------------------------------------------------------------------
+
+SELECT * FROM mst_government_discount_tax;
+	
 -- ----------------------------------------------------------------------------------------------------	
