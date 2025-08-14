@@ -1,0 +1,5 @@
+- cd to 
+	C:\wamp64\bin\mysql\mysql5.7.36\bin
+
+	- run command (x2)
+	mysql -uroot db_dump_2log --force < D:\www\jacob\appserv\app\batch\stored_procedures.sql
