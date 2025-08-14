@@ -1,5 +1,3 @@
--- Update --------------------------------------------------------------------------------------------------------------
--- Set variables (do not remove)
 SET 	
     @companyID := 'SHOST-10050582',
 	@pubID := 'SHOST-10050582-0002',
@@ -17,445 +15,422 @@ JOIN(
 
         ,ROUND(
             (
+                -- total taxables
                 (
-                    SELECT SUM(
-                        ROUND(
-                            CASE
-                                WHEN psd.ftax_type = 0
-                                    AND psd.fstatus_flag IN (0, 1)
-                                    AND psd.ftotal_line <> 0
-                                THEN
-                                    CASE
-                                        WHEN psd.fdiscount > 0 THEN
-                                            (psd.fextprice * psd.fqty
-                                            * (1 - psd.fdiscp / 100)
-                                            * (1 - psd.fdiscount_percent4 / 100)
-                                            * (1 - psd.fdiscount_percent6 / 100))
-                                            - psd.ftotal_discount
-                                        ELSE
-                                            (psd.fextprice * psd.fqty
-                                            * (1 - psd.fdiscp / 100)
-                                            * (1 - psd.fdiscount_percent4 / 100)
-                                            * (1 - psd.fdiscount_percent6 / 100))
-                                    END
-                                ELSE 0
-                            END,
-                        2)
-                    )
-                    FROM pos_sale_product psd
-                    WHERE psd.frecno = a.frecno
-                    AND psd.fpubid = a.fpubid
-                    AND psd.ftermid = a.ftermid
-                    AND psd.fcompanyid = a.fcompanyid
-                    AND psd.fstatus_flag NOT IN ('V', 'W')
-                )
-                +
-                (
-                    SELECT SUM(
-                        ROUND(
-                            CASE
-                                WHEN psd.ftax_type = 1
-                                    AND psd.fstatus_flag IN (0, 1)
-                                    AND psd.ftotal_line <> 0
-                                THEN
-                                    CASE
-                                        WHEN psd.fdiscount > 0 THEN
-                                            (psd.fextprice * psd.fqty * 1.12
-                                            * (1 - psd.fdiscp / 100)
-                                            * (1 - psd.fdiscount_percent4 / 100)
-                                            * (1 - psd.fdiscount_percent6 / 100))
-                                            - psd.ftotal_discount
-                                        ELSE
-                                            (psd.fextprice * psd.fqty * 1.12
-                                            * (1 - psd.fdiscp / 100)
-                                            * (1 - psd.fdiscount_percent4 / 100)
-                                            * (1 - psd.fdiscount_percent6 / 100))
-                                    END
-                                ELSE 0
-                            END,
-                        2)
-                    )
-                    FROM pos_sale_product psd
-                    WHERE psd.frecno = a.frecno
-                    AND psd.fpubid = a.fpubid
-                    AND psd.ftermid = a.ftermid
-                    AND psd.fcompanyid = a.fcompanyid
-                    AND psd.fstatus_flag NOT IN ('V', 'W')
-                )
-            )
-            / pos.fcustomer_count
-            * (
-                pos.fcustomer_count
-                - ABS((pos.fscratio * pos.fcustomer_count))
-                - (
-                    SELECT COUNT(*)
-                    FROM pos_sale_info psi
-                    WHERE psi.frecno = a.frecno
-                        AND psi.fpubid = a.fpubid
-                        AND psi.ftermid = a.ftermid
-                        AND psi.fcompanyid = a.fcompanyid
-                        AND psi.fcode2 IN ('#PWD', '#DIP', 'NAC', '#SPD', 'MOV')
-                )
-            )
-            - (
-                (
-                    SELECT SUM(
-                        ROUND(
-                            CASE
-                                WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
-
-                                -- If fdiscount or fdiscp exists
-                                WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
-                                    psd.funitprice * psd.fqty
-                                    - CASE 
-                                        WHEN psd.fdiscount > 0 THEN psd.ftotal_discount
-                                        ELSE psd.funitprice * psd.fqty * psd.fdiscp / 100
-                                    END
-
-                                -- If all I:N discount fields are zero/null
-                                WHEN (
-                                    IFNULL(psd.fsc_discp, 0) = 0 AND
-                                    IFNULL(psd.fdiscount_percent1, 0) = 0 AND
-                                    IFNULL(psd.fdiscount_percent2, 0) = 0 AND
-                                    IFNULL(psd.fdiscount_percent4, 0) = 0 AND
-                                    IFNULL(psd.fdiscount_percent5, 0) = 0 AND
-                                    IFNULL(psd.fdiscount_percent6, 0) = 0
-                                ) THEN
-                                    psd.funitprice * psd.fqty
-
-                                -- If tax type is 0 and any of SC/PWD/SPD is 20%
-                                WHEN psd.ftax_type = 0 AND (
-                                    psd.fsc_discp = 20 OR
-                                    psd.fdiscount_percent1 = 20 OR
-                                    psd.fdiscount_percent5 = 20
-                                ) THEN
-                                    (psd.funitprice * psd.fqty) / 1.12
-                                    * (1 - psd.fsc_discp / 100)
-                                    * (1 - psd.fdiscount_percent1 / 100)
-                                    * (1 - psd.fdiscount_percent2 / 100)
-                                    * (1 - psd.fdiscount_percent4 / 100)
-                                    * (1 - psd.fdiscount_percent5 / 100)
-                                    * (1 - psd.fdiscount_percent6 / 100)
-
-                                -- All other cases: Apply all % discounts (I:N)
-                                ELSE
-                                    psd.funitprice * psd.fqty
-                                    * (1 - psd.fsc_discp / 100)
-                                    * (1 - psd.fdiscount_percent1 / 100)
-                                    * (1 - psd.fdiscount_percent2 / 100)
-                                    * (1 - psd.fdiscount_percent4 / 100)
-                                    * (1 - psd.fdiscount_percent5 / 100)
-                                    * (1 - psd.fdiscount_percent6 / 100)
-                            END,
-                        2)
-                    )
-                    FROM pos_sale_product psd
-                    WHERE psd.frecno = a.frecno
-                        AND psd.fpubid = a.fpubid
-                        AND psd.ftermid = a.ftermid
-                        AND psd.fcompanyid = a.fcompanyid
-                )
-                * (pos.fdiscp / 100)
-            )
-        , 4) AS Expected_TaxSale
-
-        ,ROUND(
-            (
-                (
+                    -- total tax inclusive
                     (
-                        SELECT SUM(
-                            ROUND(
-                                CASE
-                                    WHEN psd.ftax_type = 0
-                                        AND psd.fstatus_flag IN (0, 1)
-                                        AND psd.ftotal_line <> 0
-                                    THEN
-                                        CASE
-                                            WHEN psd.fdiscount > 0 THEN
-                                                (psd.fextprice * psd.fqty
-                                                * (1 - psd.fdiscp / 100)
-                                                * (1 - psd.fdiscount_percent4 / 100)
-                                                * (1 - psd.fdiscount_percent6 / 100))
-                                                - psd.ftotal_discount
-                                            ELSE
-                                                (psd.fextprice * psd.fqty
-                                                * (1 - psd.fdiscp / 100)
-                                                * (1 - psd.fdiscount_percent4 / 100)
-                                                * (1 - psd.fdiscount_percent6 / 100))
-                                        END
-                                    ELSE 0
-                                END,
-                            2)
+                        (
+                            SELECT SUM(
+                                ROUND(
+                                    CASE
+                                        WHEN 
+                                            psd.ftotal_line <> 0
+                                            AND psd.fstatus_flag IN (0, 1)
+                                            AND psd.fextprice IS NOT NULL AND psd.fqty IS NOT NULL
+                                            AND (
+                                                psd.ftax_type IS NULL
+                                                OR psd.ftax_type = 0
+                                                OR (
+                                                    psd.ftax_type = 0
+                                                    AND psd.foriginal_tax_type = 1
+                                                    AND (
+                                                        IFNULL(psd.fsc_discp, 0) > 0 OR
+                                                        IFNULL(psd.fdiscount_percent1, 0) > 0 OR
+                                                        IFNULL(psd.fdiscount_percent2, 0) > 0 OR
+                                                        IFNULL(psd.fdiscount_percent5, 0) > 0
+                                                    )
+                                                )
+                                            )
+                                        THEN
+                                            CASE
+                                                WHEN (psd.ftax_type IS NULL OR psd.ftax_type = 0) AND psd.foriginal_tax_type = 1
+                                                THEN
+                                                    psd.fextprice * psd.fqty * 1.12 * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                ELSE
+                                                    psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                            END
+                                        ELSE 0
+                                    END
+                                , 6)
+                            )
+                            FROM pos_sale_product psd
+                            WHERE psd.frecno = a.frecno
+                                AND psd.fpubid = a.fpubid
+                                AND psd.ftermid = a.ftermid
+                                AND psd.fcompanyid = a.fcompanyid
                         )
-                        FROM pos_sale_product psd
-                        WHERE psd.frecno = a.frecno
-                        AND psd.fpubid = a.fpubid
-                        AND psd.ftermid = a.ftermid
-                        AND psd.fcompanyid = a.fcompanyid
-                        AND psd.fstatus_flag NOT IN ('V', 'W')
                     )
+                    
                     +
+
+                    -- total tax exclusive
                     (
-                        SELECT SUM(
-                            ROUND(
-                                CASE
-                                    WHEN psd.ftax_type = 1
-                                        AND psd.fstatus_flag IN (0, 1)
-                                        AND psd.ftotal_line <> 0
-                                    THEN
-                                        CASE
-                                            WHEN psd.fdiscount > 0 THEN
-                                                (psd.fextprice * psd.fqty * 1.12
-                                                * (1 - psd.fdiscp / 100)
-                                                * (1 - psd.fdiscount_percent4 / 100)
-                                                * (1 - psd.fdiscount_percent6 / 100))
-                                                - psd.ftotal_discount
-                                            ELSE
-                                                (psd.fextprice * psd.fqty * 1.12
-                                                * (1 - psd.fdiscp / 100)
-                                                * (1 - psd.fdiscount_percent4 / 100)
-                                                * (1 - psd.fdiscount_percent6 / 100))
-                                        END
-                                    ELSE 0
-                                END,
-                            2)
+                        (
+                            SELECT SUM(
+                                ROUND(
+                                    CASE
+                                        WHEN 
+                                            psd.ftotal_line <> 0
+                                            AND psd.fstatus_flag IN (0, 1)
+                                            AND psd.ftax_type = 1
+                                            AND IFNULL(psd.fsc_discp, 0) = 0
+                                            AND IFNULL(psd.fdiscount_percent1, 0) = 0
+                                            AND IFNULL(psd.fdiscount_percent2, 0) = 0
+                                            AND IFNULL(psd.fdiscount_percent5, 0) = 0
+                                        THEN
+                                            (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount) * 1.12
+                                        ELSE 0
+                                    END,
+                                2)
+                            )
+                            FROM pos_sale_product psd
+                            WHERE psd.frecno = a.frecno
+                            AND psd.fpubid = a.fpubid
+                            AND psd.ftermid = a.ftermid
+                            AND psd.fcompanyid = a.fcompanyid
                         )
-                        FROM pos_sale_product psd
-                        WHERE psd.frecno = a.frecno
-                        AND psd.fpubid = a.fpubid
-                        AND psd.ftermid = a.ftermid
-                        AND psd.fcompanyid = a.fcompanyid
-                        AND psd.fstatus_flag NOT IN ('V', 'W')
                     )
                 )
                 / pos.fcustomer_count
                 * (
                     pos.fcustomer_count
+                    -- sr. only
                     - ABS((pos.fscratio * pos.fcustomer_count))
+                    -- regular customers only + nac + mov / taxables
                     - (
-                        SELECT COUNT(*)
-                        FROM pos_sale_info psi
-                        WHERE psi.frecno = a.frecno
-                            AND psi.fpubid = a.fpubid
-                            AND psi.ftermid = a.ftermid
-                            AND psi.fcompanyid = a.fcompanyid
-                            AND psi.fcode2 IN ('#PWD', '#DIP', 'NAC', '#SPD', 'MOV')
+                        IFNULL(
+                            (
+                                SELECT SUM(psi.fint_data)
+                                FROM pos_sale_info psi
+                                WHERE psi.frecno = a.frecno
+                                    AND psi.fpubid = a.fpubid
+                                    AND psi.ftermid = a.ftermid
+                                    AND psi.fcompanyid = a.fcompanyid
+                                    AND psi.fcode2 IN ('#PWD', '#DIP', '#SPD')
+                            )
+                        , 0)
                     )
                 )
-                - (
+                - ( 
+                    -- total taxables
                     (
-                        SELECT SUM(
-                            ROUND(
-                                CASE
-                                    WHEN psd.fstatus_flag NOT IN (0, 1) THEN 0
-
-                                    -- If fdiscount or fdiscp exists
-                                    WHEN psd.fdiscount > 0 OR psd.fdiscp > 0 THEN
-                                        psd.funitprice * psd.fqty
-                                        - CASE 
-                                            WHEN psd.fdiscount > 0 THEN psd.ftotal_discount
-                                            ELSE psd.funitprice * psd.fqty * psd.fdiscp / 100
+                        -- total tax inclusive
+                        (
+                            (
+                                SELECT SUM(
+                                    ROUND(
+                                        CASE
+                                            WHEN 
+                                                psd.ftotal_line <> 0
+                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.fextprice IS NOT NULL AND psd.fqty IS NOT NULL
+                                                AND (
+                                                    psd.ftax_type IS NULL
+                                                    OR psd.ftax_type = 0
+                                                    OR (
+                                                        psd.ftax_type = 0
+                                                        AND psd.foriginal_tax_type = 1
+                                                        AND (
+                                                            IFNULL(psd.fsc_discp, 0) > 0 OR
+                                                            IFNULL(psd.fdiscount_percent1, 0) > 0 OR
+                                                            IFNULL(psd.fdiscount_percent2, 0) > 0 OR
+                                                            IFNULL(psd.fdiscount_percent5, 0) > 0
+                                                        )
+                                                    )
+                                                )
+                                            THEN
+                                                CASE
+                                                    WHEN (psd.ftax_type IS NULL OR psd.ftax_type = 0) AND psd.foriginal_tax_type = 1
+                                                    THEN
+                                                        psd.fextprice * psd.fqty * 1.12 * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                    ELSE
+                                                        psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                END
+                                            ELSE 0
                                         END
-
-                                    -- If all I:N discount fields are zero/null
-                                    WHEN (
-                                        IFNULL(psd.fsc_discp, 0) = 0 AND
-                                        IFNULL(psd.fdiscount_percent1, 0) = 0 AND
-                                        IFNULL(psd.fdiscount_percent2, 0) = 0 AND
-                                        IFNULL(psd.fdiscount_percent4, 0) = 0 AND
-                                        IFNULL(psd.fdiscount_percent5, 0) = 0 AND
-                                        IFNULL(psd.fdiscount_percent6, 0) = 0
-                                    ) THEN
-                                        psd.funitprice * psd.fqty
-
-                                    -- If tax type is 0 and any of SC/PWD/SPD is 20%
-                                    WHEN psd.ftax_type = 0 AND (
-                                        psd.fsc_discp = 20 OR
-                                        psd.fdiscount_percent1 = 20 OR
-                                        psd.fdiscount_percent5 = 20
-                                    ) THEN
-                                        (psd.funitprice * psd.fqty) / 1.12
-                                        * (1 - psd.fsc_discp / 100)
-                                        * (1 - psd.fdiscount_percent1 / 100)
-                                        * (1 - psd.fdiscount_percent2 / 100)
-                                        * (1 - psd.fdiscount_percent4 / 100)
-                                        * (1 - psd.fdiscount_percent5 / 100)
-                                        * (1 - psd.fdiscount_percent6 / 100)
-
-                                    -- All other cases: Apply all % discounts (I:N)
-                                    ELSE
-                                        psd.funitprice * psd.fqty
-                                        * (1 - psd.fsc_discp / 100)
-                                        * (1 - psd.fdiscount_percent1 / 100)
-                                        * (1 - psd.fdiscount_percent2 / 100)
-                                        * (1 - psd.fdiscount_percent4 / 100)
-                                        * (1 - psd.fdiscount_percent5 / 100)
-                                        * (1 - psd.fdiscount_percent6 / 100)
-                                END,
-                            2)
+                                    , 6)
+                                )
+                                FROM pos_sale_product psd
+                                WHERE psd.frecno = a.frecno
+                                    AND psd.fpubid = a.fpubid
+                                    AND psd.ftermid = a.ftermid
+                                    AND psd.fcompanyid = a.fcompanyid
+                            )
                         )
-                        FROM pos_sale_product psd
-                        WHERE psd.frecno = a.frecno
+                        
+                        +
+
+                        -- total tax exclusive
+                        (
+                            (
+                                SELECT SUM(
+                                    ROUND(
+                                        CASE
+                                            WHEN 
+                                                psd.ftotal_line <> 0
+                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.ftax_type = 1
+                                                AND IFNULL(psd.fsc_discp, 0) = 0
+                                                AND IFNULL(psd.fdiscount_percent1, 0) = 0
+                                                AND IFNULL(psd.fdiscount_percent2, 0) = 0
+                                                AND IFNULL(psd.fdiscount_percent5, 0) = 0
+                                            THEN
+                                                (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount) * 1.12
+                                            ELSE 0
+                                        END,
+                                    2)
+                                )
+                                FROM pos_sale_product psd
+                                WHERE psd.frecno = a.frecno
+                                AND psd.fpubid = a.fpubid
+                                AND psd.ftermid = a.ftermid
+                                AND psd.fcompanyid = a.fcompanyid
+                            )
+                        )
+                    )
+                    * (pos.fdiscp/100)
+                )
+            )
+        , 6) AS Expected_TaxSale
+
+        ,ROUND(
+            (
+                -- total taxables
+                (
+                    -- total tax inclusive
+                    (
+                        (
+                            SELECT SUM(
+                                ROUND(
+                                    CASE
+                                        WHEN 
+                                            psd.ftotal_line <> 0
+                                            AND psd.fstatus_flag IN (0, 1)
+                                            AND psd.fextprice IS NOT NULL AND psd.fqty IS NOT NULL
+                                            AND (
+                                                psd.ftax_type IS NULL
+                                                OR psd.ftax_type = 0
+                                                OR (
+                                                    psd.ftax_type = 0
+                                                    AND psd.foriginal_tax_type = 1
+                                                    AND (
+                                                        IFNULL(psd.fsc_discp, 0) > 0 OR
+                                                        IFNULL(psd.fdiscount_percent1, 0) > 0 OR
+                                                        IFNULL(psd.fdiscount_percent2, 0) > 0 OR
+                                                        IFNULL(psd.fdiscount_percent5, 0) > 0
+                                                    )
+                                                )
+                                            )
+                                        THEN
+                                            CASE
+                                                WHEN (psd.ftax_type IS NULL OR psd.ftax_type = 0) AND psd.foriginal_tax_type = 1
+                                                THEN
+                                                    psd.fextprice * psd.fqty * 1.12 * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                ELSE
+                                                    psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                            END
+                                        ELSE 0
+                                    END
+                                , 6)
+                            )
+                            FROM pos_sale_product psd
+                            WHERE psd.frecno = a.frecno
+                                AND psd.fpubid = a.fpubid
+                                AND psd.ftermid = a.ftermid
+                                AND psd.fcompanyid = a.fcompanyid
+                        )
+                    )
+                    
+                    +
+
+                    -- total tax exclusive
+                    (
+                        (
+                            SELECT SUM(
+                                ROUND(
+                                    CASE
+                                        WHEN 
+                                            psd.ftotal_line <> 0
+                                            AND psd.fstatus_flag IN (0, 1)
+                                            AND psd.ftax_type = 1
+                                            AND IFNULL(psd.fsc_discp, 0) = 0
+                                            AND IFNULL(psd.fdiscount_percent1, 0) = 0
+                                            AND IFNULL(psd.fdiscount_percent2, 0) = 0
+                                            AND IFNULL(psd.fdiscount_percent5, 0) = 0
+                                        THEN
+                                            (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount) * 1.12
+                                        ELSE 0
+                                    END,
+                                2)
+                            )
+                            FROM pos_sale_product psd
+                            WHERE psd.frecno = a.frecno
                             AND psd.fpubid = a.fpubid
                             AND psd.ftermid = a.ftermid
                             AND psd.fcompanyid = a.fcompanyid
+                        )
                     )
-                    * (pos.fdiscp / 100)
+                )
+                / pos.fcustomer_count
+                * (
+                    pos.fcustomer_count
+                    -- sr. only
+                    - ABS((pos.fscratio * pos.fcustomer_count))
+                    -- regular customers only + nac + mov / taxables
+                    - (
+                        IFNULL(
+                            (
+                                SELECT SUM(psi.fint_data)
+                                FROM pos_sale_info psi
+                                WHERE psi.frecno = a.frecno
+                                    AND psi.fpubid = a.fpubid
+                                    AND psi.ftermid = a.ftermid
+                                    AND psi.fcompanyid = a.fcompanyid
+                                    AND psi.fcode2 IN ('#PWD', '#DIP', '#SPD')
+                            )
+                        , 0)
+                    )
+                )
+                - ( 
+                    -- total taxables
+                    (
+                        -- total tax inclusive
+                        (
+                            (
+                                SELECT SUM(
+                                    ROUND(
+                                        CASE
+                                            WHEN 
+                                                psd.ftotal_line <> 0
+                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.fextprice IS NOT NULL AND psd.fqty IS NOT NULL
+                                                AND (
+                                                    psd.ftax_type IS NULL
+                                                    OR psd.ftax_type = 0
+                                                    OR (
+                                                        psd.ftax_type = 0
+                                                        AND psd.foriginal_tax_type = 1
+                                                        AND (
+                                                            IFNULL(psd.fsc_discp, 0) > 0 OR
+                                                            IFNULL(psd.fdiscount_percent1, 0) > 0 OR
+                                                            IFNULL(psd.fdiscount_percent2, 0) > 0 OR
+                                                            IFNULL(psd.fdiscount_percent5, 0) > 0
+                                                        )
+                                                    )
+                                                )
+                                            THEN
+                                                CASE
+                                                    WHEN (psd.ftax_type IS NULL OR psd.ftax_type = 0) AND psd.foriginal_tax_type = 1
+                                                    THEN
+                                                        psd.fextprice * psd.fqty * 1.12 * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                    ELSE
+                                                        psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                END
+                                            ELSE 0
+                                        END
+                                    , 6)
+                                )
+                                FROM pos_sale_product psd
+                                WHERE psd.frecno = a.frecno
+                                    AND psd.fpubid = a.fpubid
+                                    AND psd.ftermid = a.ftermid
+                                    AND psd.fcompanyid = a.fcompanyid
+                            )
+                        )
+                        
+                        +
+
+                        -- total tax exclusive
+                        (
+                            (
+                                SELECT SUM(
+                                    ROUND(
+                                        CASE
+                                            WHEN 
+                                                psd.ftotal_line <> 0
+                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND psd.ftax_type = 1
+                                                AND IFNULL(psd.fsc_discp, 0) = 0
+                                                AND IFNULL(psd.fdiscount_percent1, 0) = 0
+                                                AND IFNULL(psd.fdiscount_percent2, 0) = 0
+                                                AND IFNULL(psd.fdiscount_percent5, 0) = 0
+                                            THEN
+                                                (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount) * 1.12
+                                            ELSE 0
+                                        END,
+                                    2)
+                                )
+                                FROM pos_sale_product psd
+                                WHERE psd.frecno = a.frecno
+                                AND psd.fpubid = a.fpubid
+                                AND psd.ftermid = a.ftermid
+                                AND psd.fcompanyid = a.fcompanyid
+                            )
+                        )
+                    )
+                    * (pos.fdiscp/100)
                 )
             ) / 1.12 * 0.12
-        , 4) AS Expected_SalesTax
+        , 6) AS Expected_SalesTax
 
         ,ROUND(
-            CASE
+            CASE 
+                -- gov discounts customers = 0
                 WHEN (
                     (
-                        ABS(pos.fscratio * pos.fcustomer_count)
+                        (ABS((pos.fscratio * pos.fcustomer_count)))
                         + (
-                            SELECT COUNT(*)
-                            FROM pos_sale_info psi
-                            WHERE psi.frecno = a.frecno
-                                AND psi.fpubid = a.fpubid
-                                AND psi.ftermid = a.ftermid
-                                AND psi.fcompanyid = a.fcompanyid
-                                AND psi.fcode2 IN ('#PWD', '#DIP', '#SPD')
+                            IFNULL(
+                                (
+                                    SELECT SUM(psi.fint_data)
+                                    FROM pos_sale_info psi
+                                    WHERE psi.frecno = a.frecno
+                                        AND psi.fpubid = a.fpubid
+                                        AND psi.ftermid = a.ftermid
+                                        AND psi.fcompanyid = a.fcompanyid
+                                        AND psi.fcode2 IN ('#PWD', '#DIP', '#SPD')
+                                )
+                            , 0)
                         )
                     ) = 0
                 )
+
                 THEN (
-                    SELECT SUM(
-                        ROUND(
-                            CASE
-                                WHEN psd.ftax_type = 4
-                                    AND psd.fstatus_flag IN (0, 1)
-                                    AND psd.ftotal_line <> 0
-                                THEN
-                                    CASE
-                                        WHEN psd.fdiscount > 0 THEN
-                                            (psd.fextprice * psd.fqty
-                                            * (1 - psd.fdiscp / 100)
-                                            * (1 - psd.fdiscount_percent4 / 100)
-                                            * (1 - psd.fdiscount_percent6 / 100))
-                                            - psd.ftotal_discount
-                                        ELSE
-                                            (psd.fextprice * psd.fqty
-                                            * (1 - psd.fdiscp / 100)
-                                            * (1 - psd.fdiscount_percent4 / 100)
-                                            * (1 - psd.fdiscount_percent6 / 100))
-                                    END
-                                ELSE 0
-                            END,
-                        2)
-                    )
-                    FROM pos_sale_product psd
-                    WHERE psd.frecno = a.frecno
-                        AND psd.fpubid = a.fpubid
-                        AND psd.ftermid = a.ftermid
-                        AND psd.fcompanyid = a.fcompanyid
-                        AND psd.fstatus_flag NOT IN ('V', 'W')
-                )
-                ELSE (
+                    -- total vat exempt
                     (
-                        (
-                            SELECT SUM(
-                                ROUND(
-                                    CASE
-                                        WHEN psd.ftax_type = 0
-                                            AND psd.fstatus_flag IN (0, 1)
-                                            AND psd.ftotal_line <> 0
-                                        THEN
-                                            CASE
-                                                WHEN psd.fdiscount > 0 THEN
-                                                    (psd.fextprice * psd.fqty
-                                                    * (1 - psd.fdiscp / 100)
-                                                    * (1 - psd.fdiscount_percent4 / 100)
-                                                    * (1 - psd.fdiscount_percent6 / 100))
-                                                    - psd.ftotal_discount
-                                                ELSE
-                                                    (psd.fextprice * psd.fqty
-                                                    * (1 - psd.fdiscp / 100)
-                                                    * (1 - psd.fdiscount_percent4 / 100)
-                                                    * (1 - psd.fdiscount_percent6 / 100))
-                                            END
-                                        ELSE 0
-                                    END,
-                                2)
-                            )
-                            FROM pos_sale_product psd
-                            WHERE psd.frecno = a.frecno
-                            AND psd.fpubid = a.fpubid
-                            AND psd.ftermid = a.ftermid
-                            AND psd.fcompanyid = a.fcompanyid
-                            AND psd.fstatus_flag NOT IN ('V', 'W')
-                        )
-                        +
-                        (
-                            SELECT SUM(
-                                ROUND(
-                                    CASE
-                                        WHEN psd.ftax_type = 1
-                                            AND psd.fstatus_flag IN (0, 1)
-                                            AND psd.ftotal_line <> 0
-                                        THEN
-                                            CASE
-                                                WHEN psd.fdiscount > 0 THEN
-                                                    (psd.fextprice * psd.fqty * 1.12
-                                                    * (1 - psd.fdiscp / 100)
-                                                    * (1 - psd.fdiscount_percent4 / 100)
-                                                    * (1 - psd.fdiscount_percent6 / 100))
-                                                    - psd.ftotal_discount
-                                                ELSE
-                                                    (psd.fextprice * psd.fqty * 1.12
-                                                    * (1 - psd.fdiscp / 100)
-                                                    * (1 - psd.fdiscount_percent4 / 100)
-                                                    * (1 - psd.fdiscount_percent6 / 100))
-                                            END
-                                        ELSE 0
-                                    END,
-                                2)
-                            )
-                            FROM pos_sale_product psd
-                            WHERE psd.frecno = a.frecno
-                            AND psd.fpubid = a.fpubid
-                            AND psd.ftermid = a.ftermid
-                            AND psd.fcompanyid = a.fcompanyid
-                            AND psd.fstatus_flag NOT IN ('V', 'W')
-                        )
-                    )
-                    / pos.fcustomer_count
-                    * (
-                        ABS((pos.fscratio * pos.fcustomer_count))
-                        + (
-                            SELECT COUNT(*)
-                            FROM pos_sale_info psi
-                            WHERE psi.frecno = a.frecno
-                                AND psi.fpubid = a.fpubid
-                                AND psi.ftermid = a.ftermid
-                                AND psi.fcompanyid = a.fcompanyid
-                                AND fcode2 IN ('#PWD', '#DIP', '#SPD')
-                        )
-                    )
-                    / 1.12
-                    + (
                         SELECT SUM(
                             ROUND(
                                 CASE
-                                    WHEN psd.ftax_type = 4
+                                    -- First condition: matches outer IF
+                                    WHEN
+                                        psd.ftotal_line <> 0
                                         AND psd.fstatus_flag IN (0, 1)
-                                        AND psd.ftotal_line <> 0
+                                        AND (
+                                            psd.ftax_type = 4
+                                            OR (
+                                                psd.ftax_type = 1 AND (
+                                                    psd.fdiscount_percent1 > 0  -- PWD
+                                                    OR psd.fdiscount_percent2 > 0  -- Diplomat
+                                                    OR psd.fdiscount_percent5 > 0  -- SPD
+                                                )
+                                            )
+                                        )
+                                        AND psd.foriginal_tax_type NOT IN (2, 3)
                                     THEN
-                                        CASE
-                                            WHEN psd.fdiscount > 0 THEN
-                                                (psd.fextprice * psd.fqty
-                                                * (1 - psd.fdiscp / 100)
-                                                * (1 - psd.fdiscount_percent4 / 100)
-                                                * (1 - psd.fdiscount_percent6 / 100))
-                                                - psd.ftotal_discount
-                                            ELSE
-                                                (psd.fextprice * psd.fqty
-                                                * (1 - psd.fdiscp / 100)
-                                                * (1 - psd.fdiscount_percent4 / 100)
-                                                * (1 - psd.fdiscount_percent6 / 100))
-                                        END
+                                        (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100)) - psd.fdiscount
+
+                                    -- Else condition: fallback IF from Excel
+                                    WHEN (
+                                        (
+                                            IFNULL(psd.fsc_discp, 0) > 0
+                                            OR IFNULL(psd.fdiscount_percent1, 0) > 0
+                                            OR IFNULL(psd.fdiscount_percent2, 0) > 0
+                                            OR IFNULL(psd.fdiscount_percent5, 0) > 0
+                                        )
+                                        AND psd.foriginal_tax_type IN (0, 1, 4)
+                                    )
+                                    THEN psd.fextprice * psd.fqty
+
                                     ELSE 0
                                 END,
                             2)
@@ -465,18 +440,170 @@ JOIN(
                             AND psd.fpubid = a.fpubid
                             AND psd.ftermid = a.ftermid
                             AND psd.fcompanyid = a.fcompanyid
-                            AND psd.fstatus_flag NOT IN ('V', 'W')
+                    ) * (1-(pos.fdiscp/100))
+                )
+
+                ELSE (
+                    (
+                        -- total taxables
+                        (
+                            -- total tax inclusive
+                            (
+                                (
+                                    SELECT SUM(
+                                        ROUND(
+                                            CASE
+                                                WHEN 
+                                                    psd.ftotal_line <> 0
+                                                    AND psd.fstatus_flag IN (0, 1)
+                                                    AND psd.fextprice IS NOT NULL AND psd.fqty IS NOT NULL
+                                                    AND (
+                                                        psd.ftax_type IS NULL
+                                                        OR psd.ftax_type = 0
+                                                        OR (
+                                                            psd.ftax_type = 0
+                                                            AND psd.foriginal_tax_type = 1
+                                                            AND (
+                                                                IFNULL(psd.fsc_discp, 0) > 0 OR
+                                                                IFNULL(psd.fdiscount_percent1, 0) > 0 OR
+                                                                IFNULL(psd.fdiscount_percent2, 0) > 0 OR
+                                                                IFNULL(psd.fdiscount_percent5, 0) > 0
+                                                            )
+                                                        )
+                                                    )
+                                                THEN
+                                                    CASE
+                                                        WHEN (psd.ftax_type IS NULL OR psd.ftax_type = 0) AND psd.foriginal_tax_type = 1
+                                                        THEN
+                                                            psd.fextprice * psd.fqty * 1.12 * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                        ELSE
+                                                            psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount
+                                                    END
+                                                ELSE 0
+                                            END
+                                        , 6)
+                                    )
+                                    FROM pos_sale_product psd
+                                    WHERE psd.frecno = a.frecno
+                                        AND psd.fpubid = a.fpubid
+                                        AND psd.ftermid = a.ftermid
+                                        AND psd.fcompanyid = a.fcompanyid
+                                ) * (1-(pos.fdiscp/100))
+                            )
+                            
+                            +
+
+                            -- total tax exclusive
+                            (
+                                (
+                                    SELECT SUM(
+                                        ROUND(
+                                            CASE
+                                                WHEN 
+                                                    psd.ftotal_line <> 0
+                                                    AND psd.fstatus_flag IN (0, 1)
+                                                    AND psd.ftax_type = 1
+                                                    AND IFNULL(psd.fsc_discp, 0) = 0
+                                                    AND IFNULL(psd.fdiscount_percent1, 0) = 0
+                                                    AND IFNULL(psd.fdiscount_percent2, 0) = 0
+                                                    AND IFNULL(psd.fdiscount_percent5, 0) = 0
+                                                THEN
+                                                    (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100) - psd.fdiscount) * 1.12
+                                                ELSE 0
+                                            END,
+                                        2)
+                                    )
+                                    FROM pos_sale_product psd
+                                    WHERE psd.frecno = a.frecno
+                                    AND psd.fpubid = a.fpubid
+                                    AND psd.ftermid = a.ftermid
+                                    AND psd.fcompanyid = a.fcompanyid
+                                )  * (1-(pos.fdiscp/100))
+                            )
+                        )
+                        / pos.fcustomer_count
+                        * (
+                            -- sr. only
+                            ABS((pos.fscratio * pos.fcustomer_count))
+                            -- gov disc customers
+                            + (
+                                IFNULL(
+                                    (
+                                        SELECT SUM(psi.fint_data)
+                                        FROM pos_sale_info psi
+                                        WHERE psi.frecno = a.frecno
+                                            AND psi.fpubid = a.fpubid
+                                            AND psi.ftermid = a.ftermid
+                                            AND psi.fcompanyid = a.fcompanyid
+                                            AND psi.fcode2 IN ('#PWD', '#DIP', '#SPD')
+                                    )
+                                , 0)
+                            )
+                        )
+                        / 1.12
+                        + (
+                            -- total vat exempt
+                            (
+                                SELECT SUM(
+                                    ROUND(
+                                        CASE
+                                            -- First condition: matches outer IF
+                                            WHEN
+                                                psd.ftotal_line <> 0
+                                                AND psd.fstatus_flag IN (0, 1)
+                                                AND (
+                                                    psd.ftax_type = 4
+                                                    OR (
+                                                        psd.ftax_type = 1 AND (
+                                                            psd.fdiscount_percent1 > 0  -- PWD
+                                                            OR psd.fdiscount_percent2 > 0  -- Diplomat
+                                                            OR psd.fdiscount_percent5 > 0  -- SPD
+                                                        )
+                                                    )
+                                                )
+                                                AND psd.foriginal_tax_type NOT IN (2, 3)
+                                            THEN
+                                                (psd.fextprice * psd.fqty * (1 - psd.fdiscp / 100)) - psd.fdiscount
+
+                                            -- Else condition: fallback IF from Excel
+                                            WHEN (
+                                                (
+                                                    IFNULL(psd.fsc_discp, 0) > 0
+                                                    OR IFNULL(psd.fdiscount_percent1, 0) > 0
+                                                    OR IFNULL(psd.fdiscount_percent2, 0) > 0
+                                                    OR IFNULL(psd.fdiscount_percent5, 0) > 0
+                                                )
+                                                AND psd.foriginal_tax_type IN (0, 1, 4)
+                                            )
+                                            THEN psd.fextprice * psd.fqty
+
+                                            ELSE 0
+                                        END,
+                                    2)
+                                )
+                                FROM pos_sale_product psd
+                                WHERE psd.frecno = a.frecno
+                                    AND psd.fpubid = a.fpubid
+                                    AND psd.ftermid = a.ftermid
+                                    AND psd.fcompanyid = a.fcompanyid
+                            )  * (1-(pos.fdiscp/100))
+                        )
                     )
                 )
             END
-        , 4) AS Expected_VatExempt
+        , 6)  AS Expected_VatExempt
 
     FROM pos_sale_product a
-    JOIN pos_sale pos
-        ON pos.frecno = a.frecno
-        AND pos.fpubid = a.fpubid
-        AND pos.ftermid = a.ftermid
-        AND pos.fcompanyid = a.fcompanyid
+        LEFT JOIN pos_sale pos
+            ON pos.frecno = a.frecno
+            AND pos.fpubid = a.fpubid
+            AND pos.ftermid = a.ftermid
+            AND pos.fcompanyid = a.fcompanyid
+        LEFT JOIN pos_sale_product_discount pspd
+                ON pspd.fpubid = pos.fpubid 
+                AND pspd.ftermid = pos.ftermid 
+                AND pspd.fcompanyid = pos.fcompanyid 
+                AND pspd.frecno = pos.frecno
     WHERE pos.fcompanyid = @companyID
         AND pos.fpubid = @pubID
         AND pos.ftermid = @termID
@@ -485,12 +612,12 @@ JOIN(
         AND pos.fcustomer_count <> 0
         AND NOT (pos.fscdiscount <> 0 AND pos.fline_scdiscount <> 0)
     GROUP BY a.frecno
-) calc
-ON pos.frecno = calc.frecno
-    AND pos.fpubid = calc.fpubid
-    AND pos.ftermid = calc.ftermid
-    AND pos.fcompanyid = calc.fcompanyid
+) main
+ON pos.frecno = main.frecno
+    AND pos.fpubid = main.fpubid
+    AND pos.ftermid = main.ftermid
+    AND pos.fcompanyid = main.fcompanyid
 SET 
-    pos.ftax_sale = calc.Expected_TaxSale,
-    pos.ftax = calc.Expected_SalesTax,
-    pos.fvat_exempt = calc.Expected_VatExempt;
+    pos.ftax_sale = main.Expected_TaxSale,
+    pos.ftax = main.Expected_SalesTax,
+    pos.fvat_exempt = main.Expected_VatExempt;

@@ -1,15 +1,15 @@
 -- SET ----------------------------------------------------------------------------------------------------
 SET 	
-	@pubID := 'SHOST-10050582-0002'
-	,@trx_no := '308880'
-	,@termID := '0002';	
+	@pubID := 'SHOST-22062783-0013'
+	,@trx_no := '29862'
+	,@termID := '0013';
+
 -- ----------------------------------------------------------------------------------------------------	
 
 -- pos_sale_product
 -- pos_sale_product_discount
 -- pos_sale
--- pos_sale_info
--- pos_sale_senior	
+-- pos_sale_info	
 	
 -- pos_sale_product ----------------------------------------------------------------------------------------------------
 -- ----------------------------------------------------------------------------------------------------
@@ -22,27 +22,29 @@ SELECT	'' AS 'pos_sale_product'
 
 	,psd.fqty
 	,psd.ftax_type
+	,psd.foriginal_tax_type
 	
+	,psd.fdiscount3
 	,psd.fdiscount
 	,psd.fdiscp
 	
-	,psd.fsc_discp
-	-- ,psd.fscdiscount
+	,psd.fsc_discp	
+	,psd.fscdiscount
 	
 	,psd.fdiscount_percent1
-	-- ,psd.fdiscount1
+	,psd.fdiscount1
 	
 	,psd.fdiscount_percent2
-	-- ,psd.fdiscount2
+	,psd.fdiscount2
 	
 	,psd.fdiscount_percent4
-	-- ,psd.fdiscount4
+	,psd.fdiscount4
 	
 	,psd.fdiscount_percent5
-	-- ,psd.fdiscount5
+	,psd.fdiscount5
 	
 	,psd.fdiscount_percent6
-	-- ,psd.fdiscount6
+	,psd.fdiscount6
 	
 	,psd.ftotal_line
 	,psd.fstatus_flag
@@ -51,7 +53,8 @@ SELECT	'' AS 'pos_sale_product'
 	
 FROM pos_sale_product psd
 	JOIN pos_sale ps 
-		ON psd.frecno = ps.frecno
+		ON psd.frecno = ps.frecno 
+		AND psd.fpubid = ps.fpubid
 WHERE psd.fpubid = @pubID 
 	AND ps.ftrx_no = @trx_no;
 -- ----------------------------------------------------------------------------------------------------
@@ -71,6 +74,7 @@ FROM (
     FROM pos_sale_product_discount pspd
         JOIN pos_sale ps 
             ON pspd.frecno = ps.frecno
+            AND pspd.fpubid = ps.fpubid
     WHERE pspd.fpubid = @pubID
         AND ps.ftrx_no = @trx_no
 ) sub1;
@@ -155,27 +159,8 @@ FROM (
     FROM pos_sale_info psi
         JOIN pos_sale ps 
             ON psi.frecno = ps.frecno
+            AND psi.fpubid = ps.fpubid
     WHERE psi.fpubid = @pubID 
         AND ps.ftrx_no = @trx_no
 ) sub2;
 -- ----------------------------------------------------------------------------------------------------	
-
-
-
--- pos_sale_senior ----------------------------------------------------------------------------------------------------
--- ----------------------------------------------------------------------------------------------------
-SELECT '' AS 'pos_sale_senior'
-    ,sub3.* 
-FROM(
-    SELECT 
-        pss.*
-        ,ps.fpubid AS sale_fpubid
-        ,ps.frecno AS sale_frecno
-        ,ps.ftrx_no
-    FROM pos_sale_senior pss
-        JOIN pos_sale ps 
-            ON pss.frecno = ps.frecno
-    WHERE pss.fpubid = @pubID 
-        AND ps.ftrx_no = @trx_no
-) sub3;
--- ----------------------------------------------------------------------------------------------------
